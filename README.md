@@ -2,7 +2,7 @@
 
 **Pull the cord. The login appears.**
 
-![Beacon Login preview](preview.jpg)
+![Beacon Login preview](preview.gif)
 
 **Live demo:** [veraetogrex-portfolio.github.io/beacon-login](https://veraetogrex-portfolio.github.io/beacon-login/) · **Mockup:** [full-screen version](https://veraetogrex-portfolio.github.io/beacon-login/mockup/beacon-login.html)
 
