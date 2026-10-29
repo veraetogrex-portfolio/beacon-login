@@ -1,0 +1,86 @@
+/* Beacon Login — github.com/veraetogrex-portfolio · zero dependencies */
+:root {
+  --bg: #040508;
+  --line: rgba(255, 255, 255, .14);
+  --text: #f2f3f7;
+  --muted: #a4a7b6;
+  --dim: #7f8293;
+  --pulse: #7c6cff;
+  --pulse-btn: #6a5af9;
+  --ion: #3fe0d0;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; min-height: 100vh; display: grid; place-items: center; overflow: hidden;
+  background: var(--bg); color: var(--text); font: 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+button, input { font: inherit; color: inherit; }
+
+.bl { position: relative; width: 1160px; height: 760px; }
+@media (max-width: 600px) { .bl { zoom: .33; } }
+
+.bl canvas, .bl-lamp { position: absolute; left: 0; top: 0; width: 1160px; height: 760px; pointer-events: none; }
+.bl-cone {
+  opacity: 0; z-index: 1;
+  /* soften the canvas edges so the beam never ends in a hard line */
+  -webkit-mask-image: linear-gradient(#000 72%, transparent), linear-gradient(90deg, #000 85%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(#000 72%, transparent), linear-gradient(90deg, #000 85%, transparent);
+  mask-composite: intersect;
+}
+.bl-dust { z-index: 1; }   /* under the card, so motes never float over the form */
+.bl-lamp { z-index: 4; overflow: visible; }
+.bl-grip {
+  position: absolute; left: 0; top: 0; width: 84px; height: 110px; margin: -40px 0 0 -42px; z-index: 5;
+  border-radius: 40px; cursor: grab; touch-action: none; outline: none;
+}
+.bl-grip:active { cursor: grabbing; }
+.bl-grip:focus-visible { box-shadow: 0 0 0 2px #a69bff; }
+
+/* ── the card: --L (0…1) is how lit it is, --R is the radius of the light reaching it ── */
+.bl-card {
+  --L: 0; --R: 300px;
+  position: absolute; left: 580px; top: 58px; width: 500px; height: 644px; z-index: 2; padding: 46px 46px 0; margin: 0;
+  border-radius: 24px; border: 1px solid rgba(255, 255, 255, .06);
+  background: linear-gradient(160deg, #141621, #0e1017 55%, #0b0c12);
+  opacity: var(--L);
+  -webkit-mask-image: radial-gradient(circle at -400px 100px, #000 calc(var(--R) - 320px), transparent var(--R));
+  mask-image: radial-gradient(circle at -400px 100px, #000 calc(var(--R) - 320px), transparent var(--R));
+  box-shadow: calc(var(--L) * 46px) calc(var(--L) * 34px) 70px -10px rgba(0, 0, 0, .85);
+}
+/* the edge facing the beacon catches the light */
+.bl-card::before {
+  content: ""; position: absolute; inset: -1px; border-radius: 24px; padding: 1.5px; pointer-events: none; opacity: var(--L);
+  background: linear-gradient(118deg, rgba(225, 255, 250, .95), rgba(63, 224, 208, .7) 14%, rgba(124, 108, 255, .45) 34%, transparent 58%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+/* and light falls across its surface */
+.bl-card::after {
+  content: ""; position: absolute; inset: 0; border-radius: 24px; pointer-events: none; opacity: var(--L);
+  background: radial-gradient(90% 70% at 0% 12%, rgba(170, 250, 240, .1), rgba(124, 108, 255, .05) 45%, transparent 75%);
+}
+
+.bl-kicker { margin: 0; display: flex; align-items: center; gap: 10px; font: 500 13px ui-monospace, monospace; letter-spacing: .2em; text-transform: uppercase; color: var(--dim); }
+.bl-kicker i { width: 8px; height: 8px; border-radius: 50%; background: var(--ion); box-shadow: 0 0 10px var(--ion); }
+.bl-card h1 { margin: 16px 0 0; font-size: 48px; line-height: 1.02; letter-spacing: -.03em; font-weight: 600; }
+.bl-sub { margin: 12px 0 0; font-size: 19px; color: var(--muted); }
+.bl-label { display: block; margin: 26px 0 10px; font: 500 13px ui-monospace, monospace; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+.bl-label + .bl-field + .bl-label { margin-top: 18px; }
+.bl-field {
+  width: 100%; height: 62px; padding: 0 20px; border-radius: 10px; outline: none;
+  background: rgba(255, 255, 255, .035); border: 1px solid var(--line); font-size: 21px; font-weight: 500;
+  transition: border-color .2s, box-shadow .2s;
+}
+.bl-field::placeholder { color: #4a4d5c; }
+.bl-field:focus { border-color: var(--pulse); box-shadow: 0 0 0 4px rgba(124, 108, 255, .18); }
+.bl-btn {
+  width: 100%; height: 62px; margin-top: 28px; border: 0; border-radius: 12px; cursor: pointer;
+  background: var(--pulse-btn); color: #fff; font-size: 20px; font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .1) inset, 0 10px 30px -10px rgba(124, 108, 255, .8);
+}
+.bl-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--bg), 0 0 0 6px #a69bff; }
+.bl-ghost { margin-top: 0; height: 58px; font-size: 18px; background: rgba(255, 255, 255, .05); box-shadow: 0 0 0 1px var(--line) inset; color: var(--text); }
+.bl-or { display: flex; align-items: center; gap: 14px; margin: 20px 0; font: 500 12px ui-monospace, monospace; letter-spacing: .2em; color: var(--dim); }
+.bl-or::before, .bl-or::after { content: ""; flex: 1; height: 1px; background: rgba(255, 255, 255, .08); }

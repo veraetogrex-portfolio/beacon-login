@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>T06 Beacon Login — pull the cord, the light reveals the sign-in</title>
+<link rel="stylesheet" href="_shared/nocturne.css">
+<style>
+  #stage{background:#040508}
+  canvas{position:absolute;left:0;top:0;width:1440px;height:900px;pointer-events:none}
+  #cone{z-index:1}
+  #air{z-index:3}
+  #haze{z-index:3;opacity:0}
+  #cone{opacity:0}
+  #beacon{position:absolute;left:0;top:0;width:1440px;height:900px;z-index:4;pointer-events:none;overflow:visible}
+  #grip{position:absolute;left:0;top:0;width:84px;height:110px;margin:-40px 0 0 -42px;z-index:6;border-radius:40px;cursor:grab;touch-action:none;outline:none}
+  #grip:active{cursor:grabbing}
+  #grip:focus-visible{box-shadow:0 0 0 2px var(--pulse-soft)}
+
+  /* ---------- card ---------- */
+  .card{position:absolute;left:820px;top:128px;width:500px;height:644px;z-index:2;border-radius:24px;padding:46px 46px 0;
+    background:linear-gradient(160deg,#141621 0%,#0E1017 55%,#0B0C12 100%);border:1px solid rgba(255,255,255,.06);
+    --R:0px;--L:0;opacity:var(--L);
+    -webkit-mask-image:radial-gradient(circle at -400px 100px,#000 calc(var(--R) - 320px),transparent var(--R));
+            mask-image:radial-gradient(circle at -400px 100px,#000 calc(var(--R) - 320px),transparent var(--R));
+    box-shadow:calc(var(--L) * 46px) calc(var(--L) * 34px) 70px -10px rgba(0,0,0,.85)}
+  /* the edge that faces the beacon catches the light */
+  .card::before{content:"";position:absolute;inset:-1px;border-radius:24px;padding:1.5px;pointer-events:none;
+    background:linear-gradient(118deg,rgba(225,255,250,.95) 0%,rgba(63,224,208,.7) 14%,rgba(124,108,255,.45) 34%,rgba(124,108,255,0) 58%);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+            mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);opacity:var(--L)}
+  /* light falling on the surface */
+  .card::after{content:"";position:absolute;inset:0;border-radius:24px;pointer-events:none;
+    background:radial-gradient(ellipse 90% 70% at 0% 12%,rgba(170,250,240,.10),rgba(124,108,255,.05) 45%,transparent 75%);opacity:var(--L)}
+  .kicker{font:500 13px var(--f-mono);letter-spacing:.2em;color:var(--text-3);text-transform:uppercase;display:flex;align-items:center;gap:10px}
+  .kicker i{width:8px;height:8px;border-radius:50%;background:var(--ion);box-shadow:0 0 10px var(--ion)}
+  .card h1{margin:16px 0 0;font:600 48px/1.02 var(--f-text);letter-spacing:-.03em}
+  .card .sub{margin-top:12px;font:400 19px var(--f-text);color:var(--text-2)}
+  .lab{display:block;margin:30px 0 10px;font:500 13px var(--f-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--text-3)}
+  .lab+.lab{margin-top:0}
+  .card .field{width:100%;height:62px;font:500 21px var(--f-text);padding:0 20px}
+  .card .field::placeholder{color:#4A4D5C}
+  .row2{margin-top:18px}
+  .row2 .lab{margin-top:0}
+  .card .btn{width:100%;height:62px;margin-top:28px;font-size:20px;border-radius:12px}
+  .or{display:flex;align-items:center;gap:14px;margin:20px 0;font:500 12px var(--f-mono);letter-spacing:.2em;color:var(--text-3)}
+  .or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+  .card .btn.ghost{margin-top:0;height:58px;font-size:18px}
+  .btn:focus-visible,.field:focus-visible{outline:none}
+  .btn:focus-visible{box-shadow:0 0 0 3px var(--void),0 0 0 6px var(--pulse-soft)}
+
+  .status-line{opacity:.55}
+</style>
+</head>
+<body>
+<div id="stage" data-title="T06 Beacon Login" data-url="veraetogrex-portfolio.github.io/sign-in">
+  <canvas id="cone" width="1440" height="900"></canvas>
+
+  <form class="card" id="card" onsubmit="return false" autocomplete="off">
+    <div class="kicker"><i></i>Veraetogrex</div>
+    <h1>Welcome back</h1>
+    <div class="sub">Sign in to your workspace.</div>
+    <label class="lab" for="email">Email</label>
+    <input class="field" id="email" type="text" placeholder="you@studio.io" spellcheck="false" tabindex="-1">
+    <div class="row2"><label class="lab" for="pass" style="margin-top:18px">Password</label>
+    <input class="field" id="pass" type="password" placeholder="••••••••" tabindex="-1"></div>
+    <button class="btn" type="button" tabindex="-1">Sign in</button>
+    <div class="or">OR</div>
+    <button class="btn ghost" type="button" tabindex="-1">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="10" r="3.6"/><path d="M10.6 10H18M15.5 10v3M13 10v2.2"/></svg>
+      Continue with SSO</button>
+  </form>
+
+  <canvas id="haze" width="1440" height="900"></canvas>
+  <canvas id="air" width="1440" height="900"></canvas>
+
+  <svg id="beacon" viewBox="0 0 1440 900">
+    <defs>
+      <linearGradient id="rodG" x1="0" x2="1"><stop offset="0" stop-color="#1B1D26"/><stop offset=".5" stop-color="#4A4E5E"/><stop offset="1" stop-color="#1B1D26"/></linearGradient>
+      <linearGradient id="houseG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2A2D39"/><stop offset=".55" stop-color="#151720"/><stop offset="1" stop-color="#0B0C11"/></linearGradient>
+      <linearGradient id="ringG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6B7084"/><stop offset=".5" stop-color="#2B2E3A"/><stop offset="1" stop-color="#4C5062"/></linearGradient>
+      <radialGradient id="lensG"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="#C8FFF8"/><stop offset="1" stop-color="#3FE0D0" stop-opacity=".2"/></radialGradient>
+      <linearGradient id="crysG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9FFFC"/><stop offset=".45" stop-color="#3FE0D0"/><stop offset="1" stop-color="#7C6CFF"/></linearGradient>
+      <linearGradient id="crysG2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7C6CFF" stop-opacity=".9"/><stop offset="1" stop-color="#2A1F8F"/></linearGradient>
+      <filter id="blur8" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="8"/></filter>
+      <filter id="blur20" x="-2" y="-2" width="5" height="5"><feGaussianBlur stdDeviation="18"/></filter>
+    </defs>
+    <!-- ceiling mount + rod -->
+    <rect x="404" y="-6" width="56" height="14" rx="4" fill="#15171F" stroke="rgba(255,255,255,.08)"/>
+    <rect x="430.5" y="6" width="3" height="186" fill="url(#rodG)"/>
+    <rect id="rodLit" x="430.5" y="6" width="1.2" height="186" fill="#BFFFF7" opacity="0"/>
+    <circle cx="432" cy="196" r="7" fill="#1E2029" stroke="rgba(255,255,255,.18)"/>
+    <!-- head, rotated toward the card -->
+    <g id="head">
+      <ellipse id="glowBig" cx="12" cy="0" rx="40" ry="80" fill="#9FF7EE" filter="url(#blur20)" opacity="0"/>
+      <path d="M-58 -22 L-14 -60 L-14 60 L-58 22 Z" fill="url(#houseG)" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
+      <path d="M-58 -22 L-14 -60" stroke="rgba(255,255,255,.28)" stroke-width="1.2"/>
+      <rect x="-66" y="-20" width="10" height="40" rx="3" fill="#1A1C25" stroke="rgba(255,255,255,.12)"/>
+      <ellipse cx="-6" cy="0" rx="17" ry="64" fill="#07080C" stroke="url(#ringG)" stroke-width="7"/>
+      <ellipse id="lens" cx="-4" cy="0" rx="11" ry="54" fill="url(#lensG)" opacity="0"/>
+      <ellipse id="ringLit" cx="-6" cy="0" rx="17" ry="64" fill="none" stroke="#C8FFF8" stroke-width="2.4" opacity="0"/>
+      <ellipse id="glowSmall" cx="0" cy="0" rx="16" ry="62" fill="none" stroke="#3FE0D0" stroke-width="8" filter="url(#blur8)" opacity="0"/>
+      <!-- tick marks on the housing (HUD) -->
+      <g stroke="rgba(255,255,255,.25)" stroke-width="1"><path d="M-48 -14 l6 -5"/><path d="M-42 -19 l6 -5"/><path d="M-36 -24 l6 -5"/></g>
+    </g>
+    <!-- cord -->
+    <path id="cord" fill="none" stroke="#8E92A4" stroke-width="1.6" stroke-linecap="round"/>
+    <path id="cordLit" fill="none" stroke="#DFFFFB" stroke-width=".8" stroke-linecap="round" opacity="0"/>
+    <!-- pendant -->
+    <g id="crystal">
+      <ellipse id="crysHalo" cx="0" cy="34" rx="34" ry="44" fill="#3FE0D0" filter="url(#blur20)" opacity=".5"/>
+      <circle cx="0" cy="3" r="4" fill="#1E2029" stroke="#8E92A4" stroke-width="1.4"/>
+      <polygon points="0,9 15,30 0,72 -15,30" fill="url(#crysG2)"/>
+      <polygon points="0,9 15,30 0,40 -9,28" fill="url(#crysG)"/>
+      <polygon points="0,40 15,30 0,72" fill="#3FE0D0" opacity=".55"/>
+      <polyline points="0,9 15,30 0,72 -15,30 0,9" fill="none" stroke="#E9FFFC" stroke-width="1" stroke-opacity=".7"/>
+      <path d="M-15 30 L0 40 L15 30" fill="none" stroke="#E9FFFC" stroke-width=".8" stroke-opacity=".6"/>
+    </g>
+  </svg>
+  <div id="grip" role="button" tabindex="0" aria-label="Pull the cord to toggle the light (L)"></div>
+
+  <div class="status-line"><span>Veraetogrex · T06</span><span>Pull the cord · L</span></div>
+</div>
+
+<script>window.AUTOPLAY = true;</script>
+<script src="_shared/stage.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const card = $('#card'), grip = $('#grip'), email = $('#email');
+const coneCv = $('#cone'), airCv = $('#air'), cx1 = coneCv.getContext('2d'), cx2 = airCv.getContext('2d');
+const head = $('#head'), cordEl = $('#cord'), cordLit = $('#cordLit'), crystal = $('#crystal');
+
+// ---------- geometry ----------
+const HEAD = { x: 446, y: 252 };                 // centre of the emitter ring
+const ANG = Math.atan2(470 - HEAD.y, 1070 - HEAD.x);   // aims at the card
+const HALF = 0.56;                               // cone half-angle (rad)
+const APEX = { x: HEAD.x + Math.cos(ANG) * -4, y: HEAD.y + Math.sin(ANG) * -4 };
+head.setAttribute('transform', `translate(${HEAD.x} ${HEAD.y}) rotate(${ANG * 180 / Math.PI})`);
+// cord hangs from the lower lip of the housing
+const ANCHOR = (() => { const lx = -36, ly = 40, c = Math.cos(ANG), s = Math.sin(ANG); return { x: HEAD.x + lx * c - ly * s, y: HEAD.y + lx * s + ly * c }; })();
+const ROPE = 268, N = 13, SEG = ROPE / (N - 1);
+
+// ---------- static light image (rendered once) ----------
+const coneImg = coneCv, hazeImg = $('#haze');
+function conePath(g, half, len, lip) {
+  const nx = -Math.sin(ANG), ny = Math.cos(ANG);
+  g.beginPath();
+  g.moveTo(APEX.x + nx * lip, APEX.y + ny * lip);
+  g.lineTo(APEX.x + Math.cos(ANG + half) * len, APEX.y + Math.sin(ANG + half) * len);
+  g.arc(APEX.x, APEX.y, len, ANG + half, ANG - half, true);
+  g.lineTo(APEX.x - nx * lip, APEX.y - ny * lip);
+  g.closePath();
+}
+(function renderLight() {
+  const g = coneImg.getContext('2d');
+  g.filter = 'blur(26px)';
+  const grad = g.createRadialGradient(APEX.x, APEX.y, 8, APEX.x, APEX.y, 1250);
+  grad.addColorStop(0, 'rgba(235,255,252,.75)');
+  grad.addColorStop(.06, 'rgba(170,250,240,.42)');
+  grad.addColorStop(.3, 'rgba(110,190,235,.20)');
+  grad.addColorStop(.62, 'rgba(124,108,255,.11)');
+  grad.addColorStop(1, 'rgba(124,108,255,0)');
+  g.fillStyle = grad; conePath(g, HALF, 1300, 52); g.fill();
+  // brighter core
+  const core = g.createRadialGradient(APEX.x, APEX.y, 4, APEX.x, APEX.y, 900);
+  core.addColorStop(0, 'rgba(240,255,253,.55)'); core.addColorStop(.25, 'rgba(160,245,236,.14)'); core.addColorStop(1, 'rgba(160,245,236,0)');
+  g.fillStyle = core; conePath(g, HALF * .45, 1100, 30); g.fill();
+  g.filter = 'none';
+  // the wall grid shows up only where the light falls
+  const grid = document.createElement('canvas'); grid.width = 1440; grid.height = 900;
+  const q = grid.getContext('2d');
+  q.strokeStyle = 'rgba(200,240,255,.22)'; q.lineWidth = 1;
+  q.beginPath();
+  for (let x = 0; x <= 1440; x += 48) { q.moveTo(x + .5, 0); q.lineTo(x + .5, 900); }
+  for (let y = 0; y <= 900; y += 48) { q.moveTo(0, y + .5); q.lineTo(1440, y + .5); }
+  q.stroke();
+  q.globalCompositeOperation = 'destination-in';
+  q.drawImage(coneImg, 0, 0);
+  g.globalCompositeOperation = 'lighter';
+  g.globalAlpha = .9; g.drawImage(grid, 0, 0); g.globalAlpha = 1;
+  // haze for the layer in front of the card
+  const h = hazeImg.getContext('2d');
+  h.filter = 'blur(30px)';
+  const hg = h.createRadialGradient(APEX.x, APEX.y, 8, APEX.x, APEX.y, 1150);
+  hg.addColorStop(0, 'rgba(200,255,250,.55)'); hg.addColorStop(.12, 'rgba(150,240,232,.14)'); hg.addColorStop(.5, 'rgba(124,108,255,.05)'); hg.addColorStop(1, 'rgba(124,108,255,0)');
+  h.fillStyle = hg; conePath(h, HALF * .9, 1250, 40); h.fill();
+})();
+
+// ---------- dust ----------
+const dust = [];
+function seedDust() {
+  dust.length = 0;
+  let rnd = 7; const R = () => (rnd = (rnd * 16807) % 2147483647) / 2147483647;   // deterministic → identical loops
+  for (let i = 0; i < 170; i++) {
+    const d = 60 + R() * 1000, a = ANG + (R() * 2 - 1) * HALF * 1.05;
+    dust.push({ x: APEX.x + Math.cos(a) * d, y: APEX.y + Math.sin(a) * d, vx: (R() - .5) * 10, vy: -4 + R() * 12, r: .5 + R() * R() * 2.4, ph: R() * 6.28, sp: .6 + R() * 1.6 });
+  }
+}
+seedDust();
+function inCone(x, y) {
+  const dx = x - APEX.x, dy = y - APEX.y, d = Math.hypot(dx, dy);
+  let a = Math.atan2(dy, dx) - ANG;
+  const e = 1 - Math.abs(a) / HALF;
+  if (e <= 0) return 0;
+  return Math.min(1, e * 2.2) * Math.max(0, 1 - d / 1150) * Math.min(1, d / 80);
+}
+
+// ---------- rope (verlet) ----------
+let P = [];
+function restRope() {
+  P = [];
+  for (let i = 0; i < N; i++) P.push({ x: ANCHOR.x, y: ANCHOR.y + i * SEG, px: ANCHOR.x, py: ANCHOR.y + i * SEG });
+}
+restRope();
+let stretch = 0, stretchV = 0, dragging = false, grabPt = null, grabMoved = 0;
+
+// ---------- light ----------
+let on = false, L = 0, rev = 0, lightAnim = null, swayT = 0;
+const IGNITE = [[0, 0], [50, .75], [100, .12], [170, .9], [230, .45], [300, .95], [460, 1]];
+const DOUSE = [[0, 1], [60, .35], [110, .8], [170, .25], [420, 0]];
+function setLight(v) {
+  if (v === on) return;
+  on = v;
+  card.querySelectorAll('input,button').forEach(el => el.tabIndex = v ? 0 : -1);
+  if (!v && card.contains(document.activeElement)) document.activeElement.blur();
+  lightAnim = { t0: performance.now(), keys: v ? IGNITE : DOUSE, from: L };
+}
+function lightAt(now) {
+  if (!lightAnim) return on ? 1 : 0;
+  const t = now - lightAnim.t0, k = lightAnim.keys;
+  if (t >= k[k.length - 1][0]) { lightAnim = null; return on ? 1 : 0; }
+  for (let i = 1; i < k.length; i++) if (t < k[i][0]) {
+    const [t0, v0] = k[i - 1], [t1, v1] = k[i], u = (t - t0) / (t1 - t0);
+    const a = i === 1 ? lightAnim.from : v0;
+    return a + (v1 - a) * (i === k.length - 1 ? 1 - Math.pow(1 - u, 3) : u);
+  }
+  return on ? 1 : 0;
+}
+function toggle() { setLight(!on); }
+
+// ---------- input ----------
+grip.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  dragging = true; grabMoved = 0;
+  const [x, y] = Stage.toStage(e.clientX, e.clientY);
+  const end = P[N - 1];
+  grabPt = { x, y, ox: end.x - x, oy: end.y - y, sx: x, sy: y };
+});
+addEventListener('pointermove', e => {
+  if (!dragging) return;
+  const [x, y] = Stage.toStage(e.clientX, e.clientY);
+  grabPt.x = x; grabPt.y = y;
+  grabMoved = Math.max(grabMoved, Math.hypot(x - grabPt.sx, y - grabPt.sy));
+});
+addEventListener('pointerup', () => release());
+addEventListener('pointercancel', () => release());
+function release() {
+  if (!dragging) return;
+  dragging = false;
+  if (stretch < .06) { stretch = Math.max(stretch, .1); stretchV = 0; }   // a tap still gives a tug
+  P[N - 1].px += .9; P[N - 2].px += .5;                                       // little sideways sway
+  toggle();
+}
+function tug() { stretch = .16; stretchV = 0; P[N - 1].px += .7; toggle(); }
+addEventListener('keydown', e => {
+  if (e.target.matches && e.target.matches('input,textarea')) return;
+  if (e.key === 'l' || e.key === 'L') tug();
+  if ((e.key === 'Enter' || e.key === ' ') && e.target === grip) { e.preventDefault(); tug(); }
+});
+
+// ---------- frame loop ----------
+let last = performance.now(), clock = 0;
+function step(dt) {
+  const G = 2200, damp = .987;
+  swayT += dt;
+  const wind = Math.sin(swayT * 1.3) * 6 + Math.sin(swayT * 2.9) * 2.5;
+  // stretch spring (the cord is elastic)
+  if (dragging) {
+    const tx = grabPt.x + grabPt.ox, ty = grabPt.y + grabPt.oy;
+    const d = Math.hypot(tx - ANCHOR.x, ty - ANCHOR.y);
+    stretch = Math.max(0, Math.min(.42, (d - ROPE) / ROPE));
+    stretchV = 0;
+  } else {
+    stretchV += (-150 * stretch - 17 * stretchV) * dt;
+    stretch = Math.max(-.03, stretch + stretchV * dt);
+  }
+  const seg = SEG * (1 + stretch);
+  for (let i = 1; i < N; i++) {
+    const p = P[i];
+    const vx = (p.x - p.px) * damp, vy = (p.y - p.py) * damp;
+    p.px = p.x; p.py = p.y;
+    p.x += vx + wind * (i / N) * dt * dt * 4; p.y += vy + G * dt * dt;
+  }
+  if (dragging) {
+    const e = P[N - 1];
+    let tx = grabPt.x + grabPt.ox, ty = grabPt.y + grabPt.oy;
+    tx = Math.max(ANCHOR.x - 90, Math.min(ANCHOR.x + 90, tx));
+    ty = Math.max(ANCHOR.y + ROPE * .8, Math.min(ANCHOR.y + ROPE * 1.5, ty));
+    e.x = tx; e.y = ty;
+  }
+  for (let k = 0; k < 14; k++) {
+    P[0].x = ANCHOR.x; P[0].y = ANCHOR.y;
+    for (let i = 0; i < N - 1; i++) {
+      const a = P[i], b = P[i + 1];
+      const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || .001, diff = (d - seg) / d;
+      const pinB = dragging && i + 1 === N - 1;
+      const wa = i === 0 ? 0 : (pinB ? 1 : .5), wb = i === 0 ? 1 : (pinB ? 0 : .5);
+      a.x += dx * diff * wa; a.y += dy * diff * wa;
+      b.x -= dx * diff * wb; b.y -= dy * diff * wb;
+    }
+  }
+}
+function render(now) {
+  // rope path
+  let d = `M${P[0].x.toFixed(1)} ${P[0].y.toFixed(1)}`;
+  for (let i = 1; i < N - 1; i++) { const mx = (P[i].x + P[i + 1].x) / 2, my = (P[i].y + P[i + 1].y) / 2; d += ` Q${P[i].x.toFixed(1)} ${P[i].y.toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)}`; }
+  const e = P[N - 1], b = P[N - 2];
+  d += ` L${e.x.toFixed(1)} ${e.y.toFixed(1)}`;
+  cordEl.setAttribute('d', d); cordLit.setAttribute('d', d);
+  const rot = Math.atan2(e.x - b.x, e.y - b.y) * -180 / Math.PI;
+  crystal.setAttribute('transform', `translate(${e.x.toFixed(1)} ${e.y.toFixed(1)}) rotate(${rot.toFixed(1)})`);
+  grip.style.transform = `translate(${e.x.toFixed(1)}px,${(e.y + 34).toFixed(1)}px)`;
+
+  // light
+  L = lightAt(now);
+  const k = rev < L ? 4.2 : 16;
+  rev += (L - rev) * Math.min(1, k * (now - (render.t || now)) / 1000); render.t = now;
+  if (Math.abs(L - rev) < .002) rev = L;
+  const ease = rev * rev * (3 - 2 * rev);
+  if (ease !== render.lastE) {
+    card.style.setProperty('--L', ease.toFixed(3));
+    card.style.setProperty('--R', (300 + 1100 * ease).toFixed(0) + 'px');
+    card.style.visibility = ease < .003 ? 'hidden' : 'visible';
+    render.lastE = ease;
+  }
+  $('#lens').setAttribute('opacity', L.toFixed(3));
+  $('#ringLit').setAttribute('opacity', (L * .9).toFixed(3));
+  $('#glowSmall').setAttribute('opacity', (L * .9).toFixed(3));
+  $('#glowBig').setAttribute('opacity', (L * .55).toFixed(3));
+  $('#rodLit').setAttribute('opacity', (L * .35).toFixed(3));
+  cordLit.setAttribute('opacity', (L * .5).toFixed(3));
+  const breathe = .42 + .12 * Math.sin(now / 900);
+  $('#crysHalo').setAttribute('opacity', (breathe + L * .25).toFixed(3));
+
+  if (L !== render.lastL) { coneCv.style.opacity = L.toFixed(3); hazeImg.style.opacity = (L * .55).toFixed(3); }
+  if (render.dirty || L > .002) cx2.clearRect(380, 0, 1060, 900);
+  render.dirty = L > .002;
+  render.lastL = L;
+  if (L > .002) {
+    // dust motes drifting through the beam
+    cx2.globalCompositeOperation = 'lighter';
+    for (const m of dust) {
+      const f = inCone(m.x, m.y);
+      if (f <= 0) continue;
+      const tw = .55 + .45 * Math.sin(now / 1000 * m.sp + m.ph);
+      const overCard = m.x > 830 && m.x < 1310 && m.y > 140 && m.y < 760 ? .3 : 1;
+      cx2.globalAlpha = Math.min(1, f * tw * L * 1.25 * overCard);
+      cx2.fillStyle = m.r > 1.6 ? '#C9C2FF' : '#DFFFFB';
+      cx2.beginPath(); cx2.arc(m.x, m.y, m.r, 0, 6.283); cx2.fill();
+    }
+    cx2.globalAlpha = 1; cx2.globalCompositeOperation = 'source-over';
+  }
+}
+function moveDust(dt) {
+  for (const m of dust) {
+    m.x += m.vx * dt; m.y += m.vy * dt;
+    if (inCone(m.x, m.y) <= 0 && Math.random() < .02) {
+      const d = 80 + Math.random() * 950, a = ANG + (Math.random() * 2 - 1) * HALF;
+      m.x = APEX.x + Math.cos(a) * d; m.y = APEX.y + Math.sin(a) * d;
+    }
+  }
+}
+function loop(now) {
+  let dt = Math.min(.05, (now - last) / 1000); last = now;
+  const sub = 3;
+  for (let i = 0; i < sub; i++) step(dt / sub);
+  moveDust(dt);
+  render(now);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ---------- reset ----------
+function reset() {
+  on = false; L = 0; rev = 0; lightAnim = null; swayT = 0;
+  dragging = false; stretch = 0; stretchV = 0;
+  restRope(); seedDust();
+  email.value = ''; $('#pass').value = '';
+  render(performance.now());
+}
+
+Stage.init({
+  reset,
+  cursorStart: [560, 690],
+  async demo(s) {
+    const end = () => { const e = P[N - 1]; return [e.x + 2, e.y + 38]; };
+    // 0.0–0.5 dark, only the crystal glows; the cursor reaches for it
+    await s.move(end(), 400, { arc: .15 });
+    // 0.5–0.9 pull with a spring
+    const [gx, gy] = end();
+    await s.drag([[gx + 4, gy + 60], [gx + 6, gy + 104]], 300, { pre: 50, post: 30, ease: s.ease.out });
+    // 0.9–1.5 the card develops in the beam
+    await s.move([640, 600], 420, { arc: -.1 });
+    await s.click(email, { ms: 360, dx: -110 });
+    // 1.5–4.0 typing in the light while the cord sways
+    await s.type(email, 'mira@orbit.studio', { cps: 13 });
+    await s.wait(120);
+    // 4.0–4.6 second pull
+    await s.move(end(), 520, { arc: .12 });
+    const [hx, hy] = end();
+    await s.drag([[hx + 3, hy + 56], [hx + 4, hy + 98]], 280, { pre: 40, post: 30, ease: s.ease.out });
+    // 4.6–5.8 darkness, the frame settles back to the first one
+    await s.move([560, 690], 700, { arc: -.12 });
+    await s.wait(1050);
+  },
+});
+</script>
+</body>
+</html>
